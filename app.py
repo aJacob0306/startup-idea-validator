@@ -3,7 +3,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 from datetime import datetime
-import re
+
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -12,6 +12,8 @@ app = Flask(__name__)
 @app.route("/", methods=["GET", "POST"])
 def home():
     feedback = ""
+    score = None  # Initialize score to avoid UnboundLocalError
+
     if request.method == "POST":
         idea = request.form["idea"]
 
@@ -24,15 +26,15 @@ def home():
         )
 
         feedback = response.choices[0].message.content
-        score_match = re.search(r"\b([1-9]|10)\s*/\s*10\b", feedback)
-        score = score_match.group(0) if score_match else "N/A"
+
+        # Optional: Try to extract a score from the feedback text
+        import re
+        match = re.search(r"(\b\d{1,2}\b)\/?10", feedback)
+        if match:
+            score = int(match.group(1))
 
         with open("history.txt", "a") as f:
             f.write(f"\n--- {datetime.now()} ---\n")
             f.write(f"Idea: {idea}\nFeedback: {feedback}\n")
 
     return render_template("index.html", feedback=feedback, score=score)
-if __name__ == "__main__":
-    app.run(debug=True)
-
-
